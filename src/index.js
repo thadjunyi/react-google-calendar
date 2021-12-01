@@ -36,7 +36,7 @@ export default class Calendar extends React.Component {
       userTimezone: moment.tz.guess(),
       showFooter: props.showFooter,
     };
-    
+
     this.lastMonth = this.lastMonth.bind(this);
     this.nextMonth = this.nextMonth.bind(this);
   }
@@ -61,7 +61,7 @@ export default class Calendar extends React.Component {
     try {
       const res = await loadCalendarAPI(this.props.apiKey);
       console.log(res);
-    } catch(err) {
+    } catch (err) {
       console.error("Error loading GAPI client for API", err);
     }
 
@@ -70,14 +70,14 @@ export default class Calendar extends React.Component {
       try {
         //query api for events
         const res = await getEventsList(calendar.calendarId);
-  
+
         //process events
         const events = this.processEvents(res.result.items, res.result.summary, calendar.color);
-  
+
         //set state with calculated values
-        this.setState({"events": [...this.state.events, ...events[0]], "singleEvents": [...this.state.singleEvents, ...events[1]]});
-  
-      } catch(err) {
+        this.setState({ "events": [...this.state.events, ...events[0]], "singleEvents": [...this.state.singleEvents, ...events[1]] });
+
+      } catch (err) {
         console.error("Error getting events", err);
       }
     }
@@ -95,12 +95,12 @@ export default class Calendar extends React.Component {
         if (event.status == "cancelled") { //cancelled events
           cancelled.push({
             recurringEventId: event.recurringEventId,
-            originalStartTime: event.originalStartTime.dateTime ? moment(event.originalStartTime.dateTime) : moment.parseZone(event.originalStartTime.date), 
+            originalStartTime: event.originalStartTime.dateTime ? moment(event.originalStartTime.dateTime) : moment.parseZone(event.originalStartTime.date),
           });
         } else if (event.status == "confirmed") { //changed events
           changed.push({
             recurringEventId: event.recurringEventId,
-            name: event.summary,
+            name: event.summary ? event.summary : "Busy",
             description: event.description,
             location: event.location,
             originalStartTime: event.originalStartTime.dateTime ? moment(event.originalStartTime.dateTime) : moment.parseZone(event.originalStartTime.date),
@@ -113,7 +113,7 @@ export default class Calendar extends React.Component {
       } else if (event.status == "confirmed") { //normal events
         let newEvent = {
           id: event.id,
-          name: event.summary,
+          name: event.summary ? event.summary : "Busy",
           startTime: event.start.dateTime ? moment(event.start.dateTime) : moment.parseZone(event.start.date),
           endTime: event.end.dateTime ? moment(event.end.dateTime) : moment.parseZone(event.end.date),
           description: event.description,
@@ -121,7 +121,7 @@ export default class Calendar extends React.Component {
           recurrence: event.recurrence,
           changedEvents: [],
           cancelledEvents: [],
-          calendarName: calendarName,
+          calendarName: "", //calendarName,
           color: color
         };
 
@@ -185,7 +185,7 @@ export default class Calendar extends React.Component {
       }
     }
   }
-  
+
   //renders the day of week names
   renderDays() {
     return this.state.days.map((x, i) => (
@@ -265,7 +265,7 @@ export default class Calendar extends React.Component {
   //get array of arrays of length days in month containing the events in each day
   getRenderEvents(events, singleEvents) {
     let eventsEachDay = [...Array(this.state.current.daysInMonth())].map((e) => []); //create array of empty arrays of length daysInMonth
-    
+
     events.forEach((event) => {
       if (event.recurrence) {
         let duration = moment.duration(event.endTime.diff(event.startTime));
@@ -304,14 +304,14 @@ export default class Calendar extends React.Component {
               color: event.color
             };
           }
-          
-          this.drawMultiEvent(eventsEachDay, props);   
+
+          this.drawMultiEvent(eventsEachDay, props);
         });
       } else {
         //render event
         //check if event is in range
         if ((event.startTime.month() != this.state.current.month() || event.startTime.year() != this.state.current.year()) &&
-        event.endTime.month() != this.state.current.month() || event.endTime.year() != this.state.current.year()
+          event.endTime.month() != this.state.current.month() || event.endTime.year() != this.state.current.year()
         ) {
           return;
         }
@@ -330,7 +330,7 @@ export default class Calendar extends React.Component {
     singleEvents.forEach((event) => {
       if (event.recurrence) {
         let duration = moment.duration(event.endTime.diff(event.startTime));
-        
+
         //get recurrences using RRule
         let dates = Calendar.getDatesFromRRule(event.recurrence[0], event.startTime, moment(this.state.current), moment(this.state.current).add(1, "month"));
 
@@ -366,8 +366,8 @@ export default class Calendar extends React.Component {
               color: event.color
             };
           }
-          
-          this.renderSingleEvent(eventsEachDay, moment(props.startTime).date(), {...props, ...eventProps});
+
+          this.renderSingleEvent(eventsEachDay, moment(props.startTime).date(), { ...props, ...eventProps });
         });
       } else {
         //check if event is in current month
@@ -375,7 +375,7 @@ export default class Calendar extends React.Component {
           return;
         }
 
-        this.renderSingleEvent(eventsEachDay, moment(event.startTime).date(), {...event, ...eventProps});
+        this.renderSingleEvent(eventsEachDay, moment(event.startTime).date(), { ...event, ...eventProps });
       }
     });
 
@@ -384,7 +384,7 @@ export default class Calendar extends React.Component {
 
   //TODO: refactor
   //decides how to render events
-  drawMultiEvent(eventsEachDay, props) { 
+  drawMultiEvent(eventsEachDay, props) {
     let startDrawDate;
     let blockLength = 1;
     let curDate;
@@ -403,7 +403,7 @@ export default class Calendar extends React.Component {
       if (this.props.showArrow) {
         arrowLeft = true;
       }
-      
+
       startDrawDate = 1;
       curDate = moment(this.state.current).utc(true);
     } else {
@@ -416,7 +416,7 @@ export default class Calendar extends React.Component {
         if (this.props.showArrow) {
           arrowRight = true;
         }
-        
+
         //draw then quit
         this.renderMultiEventBlock(eventsEachDay, startDrawDate, blockLength, props, arrowLeft, arrowRight);
         break;
@@ -442,7 +442,7 @@ export default class Calendar extends React.Component {
 
   //TODO: refactor this too?
   //handles rendering and proper stacking of individual blocks 
-  renderMultiEventBlock(eventsEachDay, startDate, length, props, arrowLeft, arrowRight) { 
+  renderMultiEventBlock(eventsEachDay, startDate, length, props, arrowLeft, arrowRight) {
     let multiEventProps = {
       tooltipStyles: _.get(this.props.styles, 'tooltip', {}), //gets this.props.styles.tooltip if exists, else empty object
       multiEventStyles: _.get(this.props.styles, 'multiEvent', {}),
@@ -463,7 +463,7 @@ export default class Calendar extends React.Component {
           break;
         } else if (closedSlots.includes(j)) {
           continue;
-        } 
+        }
         if (dayEvents[j].props.className.includes("isEvent")) {
           closedSlots.push(j);
         }
@@ -488,9 +488,9 @@ export default class Calendar extends React.Component {
       //rest of event that is under the main banner
       eventsEachDay[startDate - 1 + i][chosenRow] = <div className="isEvent event below" key={`filler-${gud()}`}></div>;
     }
-  
+
     //render event
-    eventsEachDay[startDate - 1][chosenRow] = <div className="isEvent" key={`multi-event-${chosenRow}`}><MultiEvent {...props} {...multiEventProps} length={length} arrowLeft={arrowLeft} arrowRight={arrowRight} key={`multi-event-${gud()}`}/></div>;
+    eventsEachDay[startDate - 1][chosenRow] = <div className="isEvent" key={`multi-event-${chosenRow}`}><MultiEvent {...props} {...multiEventProps} length={length} arrowLeft={arrowLeft} arrowRight={arrowRight} key={`multi-event-${gud()}`} /></div>;
   }
 
   //attempts to render in a placeholder then at the end
@@ -499,22 +499,22 @@ export default class Calendar extends React.Component {
     let nodes = eventsEachDay[date - 1];
     for (let i = 0; i < nodes.length; i++) {
       if (nodes[i].props.className.includes("event") && !nodes[i].props.className.includes("isEvent")) { //target only placeholders
-        nodes[i] = <div className="isEvent" key={`single-event-${gud()}`}><Event {...props} key={`single-event-${gud()}`}/></div>;
+        nodes[i] = <div className="isEvent" key={`single-event-${gud()}`}><Event {...props} key={`single-event-${gud()}`} /></div>;
         foundEmpty = true;
         break;
       }
     }
     if (!foundEmpty) {
-      eventsEachDay[date - 1].push(<div className="isEvent" key={`single-event-${gud()}`}><Event {...props} key={`single-event-${gud()}`}/></div>)
+      eventsEachDay[date - 1].push(<div className="isEvent" key={`single-event-${gud()}`}><Event {...props} key={`single-event-${gud()}`} /></div>)
     }
   }
 
   //get dates based on rrule string between dates
-  static getDatesFromRRule(str, eventStart, betweenStart, betweenEnd) {    
+  static getDatesFromRRule(str, eventStart, betweenStart, betweenEnd) {
     //get recurrences using RRule
     let rstr = `DTSTART:${moment(eventStart).utc(true).format('YYYYMMDDTHHmmss')}Z\n${str}`;
-    let rruleSet = rrulestr(rstr, {forceset: true});
-    
+    let rruleSet = rrulestr(rstr, { forceset: true });
+
     //get dates
     let begin = moment(betweenStart).utc(true).toDate();
     let end = moment(betweenEnd).utc(true).toDate();
@@ -559,7 +559,7 @@ export default class Calendar extends React.Component {
           {this.renderDays()}
           {this.renderDates(eventsEachDay)}
         </div>
-        { this.state.showFooter && 
+        {this.state.showFooter &&
           <div className="calendar-footer">
             <div css={css`
               font-size: 14px;
@@ -586,7 +586,7 @@ export default class Calendar extends React.Component {
             </div>
           </div>
         }
-        
+
       </div>
     );
   }
